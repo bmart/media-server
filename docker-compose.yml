@@ -1,0 +1,184 @@
+version: "4"
+services:
+  portainer:
+    image: portainer/portainer
+    container_name: portainer
+    restart: on-failure:5
+    command: -H unix:///var/run/docker.sock
+    ports:
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./containerConfigs/portainerConfig/data:/data
+      - ./containerConfigs/portainerConfig/shared:/shared
+    environment:
+      - TZ=${TZ}
+
+
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - JELLYFIN_PublishedServerUrl=192.168.2.106 #optional
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./containerConfigs/jellyfinConfig:/config
+      - ${DATA_DIRECTORY}/McCourt/tv:/data/tvshows
+      - ${DATA_DIRECTORY}/McCourt/movies-sd:/data/movies-sd
+      - ${DATA_DIRECTORY}/McCourt/movies-hd:/data/movies-hd
+      - ${DATA_DIRECTORY}/Martin/movies:/data/movies
+      - ${DATA_DIRECTORY}/data:/data/downloads
+
+    ports:
+      - "8096:8096"
+        # - 8920:8920 #optional
+        # - 7359:7359/udp #optional
+        # - 1900:1900/udp #optional
+    restart: unless-stopped
+
+  gluetun:
+    image: qmcgaw/gluetun
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - 80:80 # Heimdall 
+      - 443:443 # Heimdall
+      - 3000:3000 # Firefox
+      - 8888:8888/tcp # HTTP proxy
+      - 8388:8388/tcp # Shadowsocks
+      - 8388:8388/udp # Shadowsocks
+      - 8085:8085 # qbittorrent
+      - 6885:6881 # qbittorrent
+      - 6885:6881/udp # qbittorrent
+      - 7878:7878 # radarr
+      - 8989:8989 # sonarr
+      - 8787:8787 # readarr
+      - 9696:9696 # prowlarr
+      - 8080:8080 # sabnzbd
+    environment:
+      - VPN_SERVICE_PROVIDER=${VPN_SERVICE_PROVIDER}
+      - OPENVPN_USER=${OPENVPN_USER}
+      - OPENVPN_PASSWORD=${OPENVPN_PASSWORD}
+      # - VPN_TYPE=wireguard
+      # - WIREGUARD_PRIVATE_KEY=
+      # - WIREGUARD_ADDRESSES=
+      - SERVER_REGIONS=${SERVER_REGIONS}
+      - FIREWALL_OUTBOUND_SUBNETS=${FIREWALL_OUTBOUND_SUBNETS} # Allow for LAN communication between containers
+    restart: on-failure:5
+
+      #firefox:
+      #image: lscr.io/linuxserver/firefox:latest
+      #container_name: firefox
+      #network_mode: "service:gluetun"
+      #security_opt:
+      #- seccomp:unconfined #optional
+      #environment:
+      #- PUID=${PUID}
+      #- PGID=${PGID}
+      #- TZ=Etc/UTC
+      #volumes:
+      #- ./containerConfigs/firefoxConfig:/config
+      #shm_size: "1gb"
+      #restart: on-failure:5
+
+  heimdall:
+    image: lscr.io/linuxserver/heimdall:latest
+    container_name: heimdall
+    network_mode: "service:gluetun"
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./containerConfigs/heimdallConfig:/config
+    restart: on-failure:5
+
+  sabnzbd:
+    image: linuxserver/sabnzbd:4.1.0
+    container_name: sabnzbd
+    network_mode: "service:gluetun"
+    volumes:
+      - ${DATA_DIRECTORY}/config:/config
+      - ${DATA_DIRECTORY}/downloads:/downloads
+      - ${DATA_DIRECTORY}/incomplete/downloads:/incomplete-downloads
+    restart: on-failure:5
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./containerConfigs/sonarrConfig:/config
+      - ${DATA_DIRECTORY}/downloads:/downloads
+      - ${DATA_DIRECTORY}/data/sonarr:/data
+      - ${DATA_DIRECTORY}/torrents:/downloads #optional
+    restart: on-failure:5
+    network_mode: "service:gluetun"
+  
+  
+  readarr:
+    image: lscr.io/linuxserver/readarr:develop
+    container_name: readarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./containerConfigs/readarrConfig:/config
+      - ${DATA_DIRECTORY}/data/readarr:/data
+      - ${DATA_DIRECTORY}/downloads:/downloads
+    restart: on-failure:5
+    network_mode: "service:gluetun"
+  
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./containerConfigs/radarrConfig:/config
+      - ${DATA_DIRECTORY}/data/radarr:/data
+      - ${DATA_DIRECTORY}/downloads:/downloads
+    restart: on-failure:5
+    network_mode: "service:gluetun"
+        
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    env_file: .env
+    network_mode: "service:gluetun"
+    environment:
+      - WEBUI_PORT=8085
+      - PUID=${PUID}
+      - PGID=${PGID}
+    volumes:
+      - ./containerConfigs/qbitConfig:/config
+      - ${DATA_DIRECTORY}/downloads:/downloads
+    restart: on-failure:5
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./containerConfigs/prowlarrConfig:/config
+    restart: on-failure:5
+    network_mode: "service:gluetun"
+

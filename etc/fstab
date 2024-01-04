@@ -1,0 +1,11 @@
+proc            /proc           proc    defaults          0       0
+PARTUUID=ed877939-01  /boot/firmware  vfat    defaults          0       2
+PARTUUID=ed877939-02  /               ext4    defaults,noatime  0       1
+# a swapfile is not a swap partition, no line here
+#   use  dphys-swapfile swap[on|off]  for that
+UUID=C6B04293B0428A3F /mnt/media  auto   user,umask=000,utf8  0   0
+	
+	
+	
+	
+	
