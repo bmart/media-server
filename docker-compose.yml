@@ -121,7 +121,7 @@ services:
       - TZ=${TZ}
     volumes:
       - ./containerConfigs/sonarrConfig:/config
-      - ${DATA_DIRECTORY}/downloads:/downloads
+      - ${DATA_DIRECTORY}/downloads:/downloads # mount location where download client drops data
       - ${DATA_DIRECTORY}/data/sonarr:/data
       - ${DATA_DIRECTORY}/torrents:/downloads #optional
     restart: on-failure:5
@@ -138,7 +138,7 @@ services:
     volumes:
       - ./containerConfigs/readarrConfig:/config
       - ${DATA_DIRECTORY}/data/readarr:/data
-      - ${DATA_DIRECTORY}/downloads:/downloads
+      - ${DATA_DIRECTORY}/downloads:/downloads # mount location where download client drops data
     restart: on-failure:5
     network_mode: "service:gluetun"
   
@@ -152,7 +152,7 @@ services:
     volumes:
       - ./containerConfigs/radarrConfig:/config
       - ${DATA_DIRECTORY}/data/radarr:/data
-      - ${DATA_DIRECTORY}/downloads:/downloads
+      - ${DATA_DIRECTORY}/downloads:/downloads # mount location where download client drops data
     restart: on-failure:5
     network_mode: "service:gluetun"
         
